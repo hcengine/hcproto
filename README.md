@@ -1,0 +1,2 @@
+# hcproto
+simple binary proto

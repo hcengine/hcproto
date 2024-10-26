@@ -4,7 +4,7 @@ use std::fmt::Display;
 use std::hash::Hash;
 
 #[repr(u8)]
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ValueType {
     Nil = 0,
     Bool = 1,
@@ -163,7 +163,7 @@ pub enum Value {
     Raw(Vec<u8>),
     Arr(Vec<Value>),
     Map(HashMap<Value, Value>),
-    KeyValue(String, Vec<Value>),
+    Kv(String, Vec<Value>),
 }
 
 impl Value {
@@ -246,7 +246,7 @@ impl fmt::Debug for Value {
             Value::Raw(ref val) => write!(fmt, "str({:?})", val),
             Value::Arr(ref val) => write!(fmt, "arr({:?})", val),
             Value::Map(ref val) => write!(fmt, "str({:?})", val),
-            Value::KeyValue(ref key, ref val) => write!(fmt, "key:{:?}, str({:?})", key, val),
+            Value::Kv(ref key, ref val) => write!(fmt, "key:{:?}, str({:?})", key, val),
         }
     }
 }
@@ -338,6 +338,13 @@ impl From<Vec<Value>> for Value {
 impl From<HashMap<Value, Value>> for Value {
     fn from(val: HashMap<Value, Value>) -> Value {
         Value::Map(val)
+    }
+}
+
+
+impl From<(String, Vec<Value>)> for Value {
+    fn from(val: (String, Vec<Value>)) -> Value {
+        Value::Kv(val.0, val.1)
     }
 }
 
@@ -566,7 +573,7 @@ pub fn get_type_by_value(value: &Value) -> ValueType {
         Value::Raw(_) => ValueType::Raw,
         Value::Arr(_) => ValueType::Arr,
         Value::Map(_) => ValueType::Map,
-        Value::KeyValue(_, _) => ValueType::Kv,
+        Value::Kv(_, _) => ValueType::Kv,
         _ => ValueType::Nil,
     }
 }

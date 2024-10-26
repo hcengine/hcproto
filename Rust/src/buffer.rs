@@ -3,9 +3,9 @@ use std::{
     io::{Read, Write},
 };
 
-use algorithm::buf::BinaryMut;
+use algorithm::buf::{BinaryMut, Bt};
 
-use crate::error::HpResult;
+use crate::{encode::{encode_str_raw, encode_varint}, error::HpResult, ErrorKind, HpError, Value};
 
 #[derive(Debug)]
 pub struct Buffer {
@@ -34,11 +34,21 @@ impl Buffer {
     }
 
     pub fn get_str(&self, idx: u16) -> HpResult<String> {
-        // if idx as usize >= self.str_arr.len() {
-        //     fail!((ErrorKind::BufferOverMaxError, "must left space to read "));
-        // } else {
-        Ok(self.str_arr[idx as usize].clone())
-        // }
+        if idx as usize >= self.str_arr.len() {
+            Err(HpError::from((ErrorKind::BufferOverMaxError, "must left space to read ")))
+        } else {
+            Ok(self.str_arr[idx as usize].clone())
+        }
+    }
+
+    pub fn export(self) -> HpResult<Buffer> {
+        let mut sub_buffer = Buffer::new();
+        encode_varint(&mut sub_buffer, &Value::U16(self.str_arr.len() as u16))?;
+        for v in &self.str_arr {
+            encode_str_raw(&mut sub_buffer, &Value::Str(v.to_string()))?;
+        }
+        sub_buffer.buf.put_slice(self.buf.chunk());
+        Ok(sub_buffer)
     }
 }
 

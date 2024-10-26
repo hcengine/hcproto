@@ -193,7 +193,7 @@ pub fn decode_arr(buffer: &mut Buffer) -> HpResult<Value> {
     Ok(Value::from(arr))
 }
 
-fn decode_by_pattern(buffer: &mut Buffer, pattern: &ValueType) -> HpResult<Value> {
+pub fn decode_by_pattern(buffer: &mut Buffer, pattern: &ValueType) -> HpResult<Value> {
     match *pattern {
         ValueType::Bool => decode_bool(buffer, *pattern),
         ValueType::U8 | ValueType::I8 | ValueType::U16 | ValueType::I16 | ValueType::U32 | ValueType::I32 => {
@@ -214,6 +214,15 @@ fn decode_by_pattern(buffer: &mut Buffer, pattern: &ValueType) -> HpResult<Value
         ValueType::StrIdx => {
             let idx: u16 = decode_varint(buffer)?.into();
             Ok(Value::from(buffer.get_str(idx)?))
+        }
+        ValueType::Kv => {
+            let name: String = decode_str_raw(buffer, *pattern)?.into();
+            let len: u32 = decode_varint(buffer)?.into();
+            let mut result = vec![];
+            for _ in 0..len {
+                result.push(decode_field(buffer)?);
+            }
+            Ok(Value::from((name, result)))
         }
         // TYPE_AMAP => decode_array!(decode_field(buffer, config), Value::AMap, Value::Map),
         ValueType::Nil => Ok(Value::Nil),

@@ -151,6 +151,13 @@ pub fn encode_str_idx(buffer: &mut Buffer, pattern: &str) -> Result<()> {
 }
 
 #[inline(always)]
+pub fn encode_str_idx_not_type(buffer: &mut Buffer, pattern: &str) -> Result<()> {
+    let idx = buffer.add_str(pattern.to_string());
+    encode_varint(buffer, &Value::U16(idx))?;
+    Ok(())
+}
+
+#[inline(always)]
 pub fn encode_str_raw(buffer: &mut Buffer, value: &Value) -> Result<()> {
     match *value {
         Value::Str(ref val) => {
@@ -226,9 +233,9 @@ pub fn encode_field(buffer: &mut Buffer, value: &Value) -> Result<()> {
             encode_type(buffer, value)?;
             encode_map(buffer, value)?;
         }
-        Value::KeyValue(ref key, ref val) => {
+        Value::Kv(ref key, ref val) => {
             encode_type(buffer, value)?;
-            encode_str_idx(buffer, key)?;
+            encode_str_idx_not_type(buffer, key)?;
             encode_varint(buffer, &Value::from(val.len() as u16))?;
             for v in val {
                 encode_field(buffer, v)?;

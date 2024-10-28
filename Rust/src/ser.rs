@@ -250,7 +250,7 @@ impl<'s> ser::Serializer for &'s mut Serializer {
     }
 
     fn is_human_readable(&self) -> bool {
-        true
+        false
     }
 }
 

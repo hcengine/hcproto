@@ -200,12 +200,10 @@ pub fn decode_by_pattern(buffer: &mut Buffer, pattern: &ValueType) -> HpResult<V
             decode_number(buffer, *pattern)
         }
         ValueType::F32 => {
-            let val: i64 = decode_varint(buffer)?.into();
-            Ok(Value::F32(val as f32 / 1000.0))
+            Ok(Value::F32(buffer.buf.try_get_f32()?))
         }
         ValueType::F64 => {
-            let val: i64 = decode_varint(buffer)?.into();
-            Ok(Value::F64(val as f64 / 1000000.0f64))
+            Ok(Value::F64(buffer.buf.try_get_f64()?))
         }
         ValueType::Varint => decode_varint(buffer),
         ValueType::Str | ValueType::Raw => decode_str_raw(buffer, *pattern),

@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::net;
 
 use crate::decode::{
     decode_by_pattern, decode_field, decode_str_raw, decode_type, decode_varint, peek_type,
@@ -77,22 +78,20 @@ impl<'de> Deserializer<'de> {
         println!("visit_seq");
         let value = visitor.visit_seq(CommaSeparated {de: self, array, len: 0})?;
         Ok(value)
-        //
-        // todo!()
-        // let value = visitor.visit_seq(DeserializerSeqVisitor { de: self, len, end })?;
-        // assert_next_token(self, end)?;
-        // Ok(value)
     }
 
     fn visit_map<V>(&mut self, val: HashMap<Value, Value>, visitor: V) -> Result<V::Value, HpError>
     where
         V: Visitor<'de>,
     {
-        println!("visit_seq");
-        todo!()
-        // let value = visitor.visit_map(DeserializerMapVisitor { de: self, len, end })?;
-        // assert_next_token(self, end)?;
-        // Ok(value)
+        let mut array = vec![];
+        for (k, v) in val.into_iter() {
+            array.push(k);
+            array.push(v);
+        }
+        let array = array.drain(..).rev().collect();
+        let value = visitor.visit_map(CommaSeparated {de: self, array, len: 0})?;
+        Ok(value)
     }
 }
 
@@ -115,27 +114,6 @@ impl<'de> de::Deserializer<'de> for &mut Deserializer<'de> {
             let value = decode_field(&mut self.buf)?;
             self.visit_val(value, visitor)
         }
-        // match value {
-        //     crate::Value::Nil => visitor.visit_none(),
-        //     crate::Value::Bool(v) => visitor.visit_bool(v),
-        //     crate::Value::U8(v) => visitor.visit_u8(v),
-        //     crate::Value::I8(v) => visitor.visit_i8(v),
-        //     crate::Value::U16(v) => visitor.visit_u16(v),
-        //     crate::Value::I16(v) => visitor.visit_i16(v),
-        //     crate::Value::U32(v) => visitor.visit_u32(v),
-        //     crate::Value::I32(v) => visitor.visit_i32(v),
-        //     crate::Value::U64(v) => visitor.visit_u64(v),
-        //     crate::Value::I64(v) => visitor.visit_i64(v),
-        //     crate::Value::Varint(v) => visitor.visit_i64(v),
-        //     crate::Value::F32(v) => visitor.visit_f32(v),
-        //     crate::Value::F64(v) => visitor.visit_f64(v),
-        //     crate::Value::Str(v) => visitor.visit_string(v),
-        //     crate::Value::Raw(vec) => visitor.visit_byte_buf(vec),
-        //     crate::Value::Arr(vec) => self.visit_seq(vec, visitor),
-        //     crate::Value::Map(hash_map) => self.visit_map(hash_map, visitor),
-        //     // crate::Value::KeyValue(name, vec) => todo!(),
-        //     _ => unreachable!()
-        // }
     }
 
     fn deserialize_option<V>(self, visitor: V) -> Result<V::Value, Self::Error>
@@ -182,35 +160,37 @@ impl<'de> de::Deserializer<'de> for &mut Deserializer<'de> {
         }
     }
 
-    fn deserialize_tuple<V>(self, len: usize, visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize_tuple<V>(self, _len: usize, visitor: V) -> Result<V::Value, Self::Error>
     where
         V: Visitor<'de>,
     {
-        let t = peek_type(&mut self.buf)?;
-        if t == ValueType::Kv {
-            // visitor.visit_seq(self)
-            Err(de::Error::custom("struct must be kv type"))
-        } else {
-            Err(de::Error::custom("struct must be kv type"))
+        let value = decode_field(&mut self.buf)?;
+        match value {
+            Value::Kv(_n, v) => {
+                self.visit_seq(v, visitor)
+            }
+            _ => {
+                Err(de::Error::custom("struct must be kv type"))
+            }
         }
     }
 
     fn deserialize_tuple_struct<V>(
         self,
-        name: &'static str,
+        _name: &'static str,
         len: usize,
         visitor: V,
     ) -> Result<V::Value, Self::Error>
     where
         V: Visitor<'de>,
     {
-        todo!()
+        self.deserialize_tuple(len, visitor)
     }
 
     fn deserialize_struct<V>(
         self,
-        name: &'static str,
-        fields: &'static [&'static str],
+        _name: &'static str,
+        _fields: &'static [&'static str],
         visitor: V,
     ) -> Result<V::Value, Self::Error>
     where
@@ -222,18 +202,11 @@ impl<'de> de::Deserializer<'de> for &mut Deserializer<'de> {
             let name: String = decode_by_pattern(&mut self.buf, &ValueType::StrIdx)?.into();
             let len: u32 = decode_varint(&mut self.buf)?.into();
             println!("name = {name} len = {len}");
-            // let mut result = vec![];
-
             visitor.visit_map(CommaSeparated {
                 de: self,
                 array: vec![],
                 len: len as usize,
             })
-            // Ok(Value::from((name, result)))
-
-            // Err(de::Error::custom(
-            //     "struct must be kv type",
-            // ))
         } else {
             Err(de::Error::custom("struct must be kv type"))
         }
@@ -268,8 +241,7 @@ impl<'de> SeqAccess<'de> for CommaSeparated<'_, 'de> {
         T: DeserializeSeed<'de>,
     {
         if !self.array.is_empty() {
-            let val = self.array.pop().unwrap();
-            self.de.value = Some(val);
+            self.de.value = self.array.pop();
             seed.deserialize(&mut *self.de).map(Some)
         } else {
             if self.len == 0 {
@@ -280,8 +252,6 @@ impl<'de> SeqAccess<'de> for CommaSeparated<'_, 'de> {
     }
 }
 
-// `MapAccess` is provided to the `Visitor` to give it the ability to iterate
-// through entries of the map.
 impl<'de> MapAccess<'de> for CommaSeparated<'_, 'de> {
     type Error = HpError;
 
@@ -289,18 +259,96 @@ impl<'de> MapAccess<'de> for CommaSeparated<'_, 'de> {
     where
         K: DeserializeSeed<'de>,
     {
-        println!("now len = {}", self.len);
-        if self.len == 0 {
-            return Ok(None);
+        if !self.array.is_empty() {
+            self.de.value = self.array.pop();
+            seed.deserialize(&mut *self.de).map(Some)
+        } else {
+            println!("now len = {}", self.len);
+            if self.len == 0 {
+                return Ok(None);
+            }
+            self.len -= 1;
+            seed.deserialize(&mut *self.de).map(Some)
         }
-        self.len -= 1;
-        seed.deserialize(&mut *self.de).map(Some)
+
     }
 
     fn next_value_seed<V>(&mut self, seed: V) -> HpResult<V::Value>
     where
         V: DeserializeSeed<'de>,
     {
-        seed.deserialize(&mut *self.de)
+        if !self.array.is_empty() {
+            self.de.value = self.array.pop();
+            seed.deserialize(&mut *self.de)
+        } else {
+            seed.deserialize(&mut *self.de)
+        }
+    }
+}
+
+
+struct Enum<'a, 'de: 'a> {
+    de: &'a mut Deserializer<'de>,
+}
+
+impl<'a, 'de> Enum<'a, 'de> {
+    fn new(de: &'a mut Deserializer<'de>) -> Self {
+        Enum { de }
+    }
+}
+
+impl<'de> EnumAccess<'de> for Enum<'_, 'de> {
+    type Error = HpError;
+    type Variant = Self;
+
+    fn variant_seed<V>(self, seed: V) -> HpResult<(V::Value, Self::Variant)>
+    where
+        V: DeserializeSeed<'de>,
+    {
+        let val = seed.deserialize(&mut *self.de)?;
+        Ok((val, self))
+    }
+}
+
+// `VariantAccess` is provided to the `Visitor` to give it the ability to see
+// the content of the single variant that it decided to deserialize.
+impl<'de> VariantAccess<'de> for Enum<'_, 'de> {
+    type Error = HpError;
+
+    // If the `Visitor` expected this variant to be a unit variant, the input
+    // should have been the plain string case handled in `deserialize_enum`.
+    fn unit_variant(self) -> HpResult<()> {
+        Err(Error::custom("unint variant"))
+    }
+
+    // Newtype variants are represented in JSON as `{ NAME: VALUE }` so
+    // deserialize the value here.
+    fn newtype_variant_seed<T>(self, seed: T) -> HpResult<T::Value>
+    where
+        T: DeserializeSeed<'de>,
+    {
+        seed.deserialize(self.de)
+    }
+
+    // Tuple variants are represented in JSON as `{ NAME: [DATA...] }` so
+    // deserialize the sequence of data here.
+    fn tuple_variant<V>(self, _len: usize, visitor: V) -> HpResult<V::Value>
+    where
+        V: Visitor<'de>,
+    {
+        de::Deserializer::deserialize_seq(self.de, visitor)
+    }
+
+    // Struct variants are represented in JSON as `{ NAME: { K: V, ... } }` so
+    // deserialize the inner map here.
+    fn struct_variant<V>(
+        self,
+        _fields: &'static [&'static str],
+        visitor: V,
+    ) -> HpResult<V::Value>
+    where
+        V: Visitor<'de>,
+    {
+        de::Deserializer::deserialize_map(self.de, visitor)
     }
 }

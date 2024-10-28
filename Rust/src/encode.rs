@@ -1,6 +1,8 @@
 use std::io::{Result, Write};
 use std::mem;
 
+use algorithm::buf::BtMut;
+
 use crate::{get_type_by_value, Buffer, Value, ValueType};
 
 #[inline(always)]
@@ -114,14 +116,6 @@ pub fn encode_varint(buffer: &mut Buffer, value: &Value) -> Result<()> {
         Value::U64(val) => val as i64,
         Value::I64(val) => val as i64,
         Value::Varint(val) => val as i64,
-        Value::F32(val) => {
-            let val = (val * 1000.0) as i64;
-            val as i64
-        }
-        Value::F64(val) => {
-            let val = (val * 1000000.0) as i64;
-            val as i64
-        }
         _ => unreachable!("encode_number only"),
     };
     let mut real = if val < 0 {
@@ -207,13 +201,13 @@ pub fn encode_field(buffer: &mut Buffer, value: &Value) -> Result<()> {
             encode_sure_type(buffer, ValueType::Varint)?;
             encode_varint(buffer, value)?;
         }
-        Value::F32(_) => {
+        Value::F32(v) => {
             encode_sure_type(buffer, ValueType::F32)?;
-            encode_varint(buffer, value)?;
+            buffer.buf.put_f32(*v);
         }
-        Value::F64(_) => {
+        Value::F64(v) => {
             encode_sure_type(buffer, ValueType::F64)?;
-            encode_varint(buffer, value)?;
+            buffer.buf.put_f64(*v);
         }
         Value::Str(ref pattern) => {
             encode_str_idx(buffer, pattern)?;

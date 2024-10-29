@@ -24,7 +24,7 @@ pub enum ValueType {
     Raw = 15,
     Arr = 16,
     Map = 17,
-    Kv = 18,
+    // Kv = 18,
 }
 
 impl From<u8> for ValueType {
@@ -47,7 +47,7 @@ impl From<u8> for ValueType {
             15 => ValueType::Raw,
             16 => ValueType::Arr,
             17 => ValueType::Map,
-            18 => ValueType::Kv,
+            // 18 => ValueType::Kv,
 
             _ => ValueType::Nil,
         }
@@ -112,7 +112,7 @@ impl From<ValueType> for ValueDescType {
             ValueType::Raw => ValueDescType::StrIdx,
             ValueType::Arr => ValueDescType::Arr,
             ValueType::Map => ValueDescType::Map,
-            ValueType::Kv => ValueDescType::Kv,
+            // ValueType::Kv => ValueDescType::Kv,
             _ => ValueDescType::Nil,
         }
     }
@@ -138,7 +138,7 @@ impl From<ValueDescType> for ValueType {
             ValueDescType::Raw => ValueType::Raw,
             ValueDescType::Arr => ValueType::Arr,
             ValueDescType::Map => ValueType::Map,
-            ValueDescType::Kv => ValueType::Kv,
+            // ValueDescType::Kv => ValueType::Kv,
             _ => ValueType::Nil,
         }
     }
@@ -163,7 +163,7 @@ pub enum Value {
     Raw(Vec<u8>),
     Arr(Vec<Value>),
     Map(HashMap<Value, Value>),
-    Kv(String, Vec<Value>),
+    // Kv(String, Vec<Value>),
 }
 
 impl Value {
@@ -246,7 +246,7 @@ impl fmt::Debug for Value {
             Value::Raw(ref val) => write!(fmt, "str({:?})", val),
             Value::Arr(ref val) => write!(fmt, "arr({:?})", val),
             Value::Map(ref val) => write!(fmt, "str({:?})", val),
-            Value::Kv(ref key, ref val) => write!(fmt, "key:{:?}, str({:?})", key, val),
+            // Value::Kv(ref key, ref val) => write!(fmt, "key:{:?}, str({:?})", key, val),
         }
     }
 }
@@ -342,11 +342,11 @@ impl From<HashMap<Value, Value>> for Value {
 }
 
 
-impl From<(String, Vec<Value>)> for Value {
-    fn from(val: (String, Vec<Value>)) -> Value {
-        Value::Kv(val.0, val.1)
-    }
-}
+// impl From<(String, Vec<Value>)> for Value {
+//     fn from(val: (String, Vec<Value>)) -> Value {
+//         Value::Kv(val.0, val.1)
+//     }
+// }
 
 impl Into<bool> for Value {
     fn into(self) -> bool {
@@ -485,7 +485,7 @@ impl Into<f32> for Value {
     fn into(self) -> f32 {
         match self {
             Value::F32(val) => val,
-            Value::Varint(val) => (val as f32 / 1000.0),
+            Value::Varint(val) => val as f32 / 1000.0,
             _ => panic!(
                 "into error type {}",
                 ValueDescType::from(get_type_by_value(&self))
@@ -498,7 +498,7 @@ impl Into<f64> for Value {
     fn into(self) -> f64 {
         match self {
             Value::F64(val) => val,
-            Value::Varint(val) => (val as f64 / 1000000.0),
+            Value::Varint(val) => val as f64 / 1000000.0,
             _ => panic!(
                 "into error type {}",
                 ValueDescType::from(get_type_by_value(&self))
@@ -573,7 +573,7 @@ pub fn get_type_by_value(value: &Value) -> ValueType {
         Value::Raw(_) => ValueType::Raw,
         Value::Arr(_) => ValueType::Arr,
         Value::Map(_) => ValueType::Map,
-        Value::Kv(_, _) => ValueType::Kv,
+        // Value::Kv(_, _) => ValueType::Kv,
         _ => ValueType::Nil,
     }
 }

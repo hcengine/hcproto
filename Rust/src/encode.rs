@@ -227,14 +227,14 @@ pub fn encode_field(buffer: &mut Buffer, value: &Value) -> Result<()> {
             encode_type(buffer, value)?;
             encode_map(buffer, value)?;
         }
-        Value::Kv(ref key, ref val) => {
-            encode_type(buffer, value)?;
-            encode_str_idx_not_type(buffer, key)?;
-            encode_varint(buffer, &Value::from(val.len() as u16))?;
-            for v in val {
-                encode_field(buffer, v)?;
-            }
-        }
+        // Value::Kv(ref key, ref val) => {
+        //     encode_type(buffer, value)?;
+        //     encode_str_idx_not_type(buffer, key)?;
+        //     encode_varint(buffer, &Value::from(val.len() as u16))?;
+        //     for v in val {
+        //         encode_field(buffer, v)?;
+        //     }
+        // }
         Value::Nil => {
             encode_type(buffer, value)?;
         }

@@ -1,14 +1,14 @@
 use std::collections::HashMap;
-use std::net;
+
 
 use crate::decode::{
-    decode_by_pattern, decode_field, decode_str_raw, decode_type, decode_varint, peek_type,
+    decode_field, decode_str_raw, decode_type, decode_varint, peek_type,
 };
 use crate::error::HpError;
 use crate::{Buffer, HpResult, Value, ValueType};
-use serde::de::value::{MapAccessDeserializer, SeqAccessDeserializer};
+
 use serde::de::{
-    self, Deserialize, DeserializeSeed, EnumAccess, Error, IntoDeserializer, MapAccess, SeqAccess,
+    self, Deserialize, DeserializeSeed, EnumAccess, Error, MapAccess, SeqAccess,
     VariantAccess, Visitor,
 };
 use serde::{forward_to_deserialize_any};
@@ -46,7 +46,6 @@ impl<'de> Deserializer<'de> {
     where
         V: Visitor<'de>,
     {
-        println!("aaaaaaaa {:?}", value);
         match value {
             crate::Value::Nil => visitor.visit_none(),
             crate::Value::Bool(v) => visitor.visit_bool(v),
@@ -75,7 +74,6 @@ impl<'de> Deserializer<'de> {
         V: Visitor<'de>,
     {
         let array = val.drain(..).rev().collect();
-        println!("visit_seq");
         let value = visitor.visit_seq(CommaSeparated {de: self, array, len: 0})?;
         Ok(value)
     }
@@ -153,7 +151,7 @@ impl<'de> de::Deserializer<'de> for &mut Deserializer<'de> {
         V: Visitor<'de>,
     {
         let t = peek_type(&mut self.buf)?;
-        if t == ValueType::Kv {
+        if t == ValueType::Arr {
             visitor.visit_newtype_struct(self)
         } else {
             Err(de::Error::custom("struct must be kv type"))
@@ -166,7 +164,7 @@ impl<'de> de::Deserializer<'de> for &mut Deserializer<'de> {
     {
         let value = decode_field(&mut self.buf)?;
         match value {
-            Value::Kv(_n, v) => {
+            Value::Arr(v) => {
                 self.visit_seq(v, visitor)
             }
             _ => {
@@ -197,11 +195,8 @@ impl<'de> de::Deserializer<'de> for &mut Deserializer<'de> {
         V: Visitor<'de>,
     {
         let t = decode_type(&mut self.buf)?;
-        if t == ValueType::Kv {
-            println!("=== buf = {:?}", self.buf);
-            let name: String = decode_by_pattern(&mut self.buf, &ValueType::StrIdx)?.into();
+        if t == ValueType::Arr {
             let len: u32 = decode_varint(&mut self.buf)?.into();
-            println!("name = {name} len = {len}");
             visitor.visit_map(CommaSeparated {
                 de: self,
                 array: vec![],
@@ -214,9 +209,9 @@ impl<'de> de::Deserializer<'de> for &mut Deserializer<'de> {
 
     fn deserialize_enum<V>(
         self,
-        name: &'static str,
-        variants: &'static [&'static str],
-        visitor: V,
+        _name: &'static str,
+        _variants: &'static [&'static str],
+        _visitor: V,
     ) -> Result<V::Value, Self::Error>
     where
         V: Visitor<'de>,
@@ -263,14 +258,12 @@ impl<'de> MapAccess<'de> for CommaSeparated<'_, 'de> {
             self.de.value = self.array.pop();
             seed.deserialize(&mut *self.de).map(Some)
         } else {
-            println!("now len = {}", self.len);
             if self.len == 0 {
                 return Ok(None);
             }
             self.len -= 1;
             seed.deserialize(&mut *self.de).map(Some)
         }
-
     }
 
     fn next_value_seed<V>(&mut self, seed: V) -> HpResult<V::Value>

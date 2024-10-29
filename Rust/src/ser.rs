@@ -1,7 +1,7 @@
 use crate::{
     encode::{
-        append_and_align, encode_bool, encode_field, encode_number, encode_str_idx, encode_str_idx_not_type, encode_str_raw, encode_sure_type, encode_type, encode_varint
-    }, Buffer, HpError, HpResult, Value, ValueType::{self, Raw}
+        append_and_align, encode_bool, encode_number, encode_str_idx, encode_sure_type, encode_type, encode_varint
+    }, Buffer, HpError, HpResult, Value, ValueType::{self}
 };
 use serde::ser::{self, Serialize};
 
@@ -14,7 +14,6 @@ where
     };
     value.serialize(&mut serializer)?;
     
-    println!("to_buffer === buf = {:?}", serializer.buf);
     serializer.buf.export()
 }
 
@@ -154,7 +153,7 @@ impl<'s> ser::Serializer for &'s mut Serializer {
 
     fn serialize_newtype_struct<T>(
         self,
-        name: &'static str,
+        _name: &'static str,
         value: &T,
     ) -> Result<Self::Ok, Self::Error>
     where
@@ -170,14 +169,14 @@ impl<'s> ser::Serializer for &'s mut Serializer {
         self,
         _name: &'static str,
         _variant_index: u32,
-        variant: &'static str,
+        _variant: &'static str,
         value: &T,
     ) -> Result<Self::Ok, Self::Error>
     where
         T: ?Sized + Serialize,
     {
-        encode_sure_type(&mut self.buf, ValueType::Kv)?;
-        encode_str_idx_not_type(&mut self.buf, &variant)?;
+        encode_sure_type(&mut self.buf, ValueType::Arr)?;
+        // encode_str_idx_not_type(&mut self.buf, &variant)?;
         encode_varint(&mut self.buf, &Value::from(1))?;
         value.serialize(self)
     }
@@ -218,11 +217,11 @@ impl<'s> ser::Serializer for &'s mut Serializer {
 
     fn serialize_struct(
         self,
-        name: &'static str,
+        _name: &'static str,
         len: usize,
     ) -> Result<Self::SerializeStruct, Self::Error> {
-        encode_sure_type(&mut self.buf, ValueType::Kv)?;
-        encode_str_idx_not_type(&mut self.buf, &name)?;
+        encode_sure_type(&mut self.buf, ValueType::Arr)?;
+        // encode_str_idx_not_type(&mut self.buf, &name)?;
         encode_varint(&mut self.buf, &Value::from(len as u32))?;
         Ok(self)
     }
@@ -349,10 +348,8 @@ impl ser::SerializeStruct for &mut Serializer {
     where
         T: ?Sized + Serialize,
     {
-        println!("len = {} == {:?}", self.buf.buf.len(), self.buf.buf);
         key.serialize(&mut **self)?;
         value.serialize(&mut **self)?;
-        println!("after len {} == {:?}", self.buf.buf.len(), self.buf.buf);
         Ok(())
     }
 

@@ -5,7 +5,7 @@ use std::mem;
 use algorithm::buf::Bt;
 
 use crate::ValueType;
-use crate::{HpResult, ValueType::StrIdx, ValueType::Varint};
+use crate::{HpResult};
 
 use super::make_extension_error;
 use super::{Buffer, ErrorKind, Value};
@@ -213,15 +213,15 @@ pub fn decode_by_pattern(buffer: &mut Buffer, pattern: &ValueType) -> HpResult<V
             let idx: u16 = decode_varint(buffer)?.into();
             Ok(Value::from(buffer.get_str(idx)?))
         }
-        ValueType::Kv => {
-            let name: String = decode_str_raw(buffer, *pattern)?.into();
-            let len: u32 = decode_varint(buffer)?.into();
-            let mut result = vec![];
-            for _ in 0..len {
-                result.push(decode_field(buffer)?);
-            }
-            Ok(Value::from((name, result)))
-        }
+        // ValueType::Kv => {
+        //     let name: String = decode_str_raw(buffer, *pattern)?.into();
+        //     let len: u32 = decode_varint(buffer)?.into();
+        //     let mut result = vec![];
+        //     for _ in 0..len {
+        //         result.push(decode_field(buffer)?);
+        //     }
+        //     Ok(Value::from((name, result)))
+        // }
         // TYPE_AMAP => decode_array!(decode_field(buffer, config), Value::AMap, Value::Map),
         ValueType::Nil => Ok(Value::Nil),
         _ => fail!((ErrorKind::TypeNotMatchError, "must match type")),

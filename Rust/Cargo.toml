@@ -1,14 +1,20 @@
 [package]
 name = "hcproto"
 version = "0.1.0"
+authors = [ "hpnlic <hpnlic@hotmail.com>" ]
 edition = "2021"
+description = "net for Rust"
+repository = "https://github.com/hcengine/hcproto"
+readme = "README.md"
+license = "MIT/Apache-2.0"
+keywords = ["hcnet"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-serde =  { version = "1.0.210", features = ["derive"] }
+serde =  { version = "1.0.214", features = ["derive"] }
 algorithm = "0.1.13"
 
 [dev-dependencies]
 serde = { version = "1", features = ["rc"] }
-serde_derive = "1"
+serde_derive = "1.0.214"

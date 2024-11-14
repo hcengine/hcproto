@@ -1,11 +1,11 @@
 use std::collections::HashMap;
-use std::io::Read;
+use std::io::{self, Read};
 use std::mem;
 
 use algorithm::buf::Bt;
 
+use crate::HpResult;
 use crate::ValueType;
-use crate::{HpResult};
 
 use super::make_extension_error;
 use super::{Buffer, ErrorKind, Value};
@@ -26,7 +26,6 @@ macro_rules! try_read {
         }
     }};
 }
-
 
 pub fn peek_type(buffer: &mut Buffer) -> HpResult<ValueType> {
     Ok(ValueType::from(buffer.buf.peek_u8()))
@@ -116,7 +115,7 @@ pub fn decode_number(buffer: &mut Buffer, pattern: ValueType) -> HpResult<Value>
     }
 }
 
-pub fn decode_varint(buffer: &mut Buffer) -> HpResult<Value> {
+pub fn decode_varint<T: io::Read>(buffer: &mut T) -> HpResult<Value> {
     let data: &mut [u8; 1] = &mut [0];
     let mut real = 0u64;
     let mut shl_num = 0;
@@ -140,6 +139,20 @@ pub fn decode_varint(buffer: &mut Buffer) -> HpResult<Value> {
         (real / 2) as i64
     };
     Ok(Value::Varint(val))
+}
+
+pub fn decode_string<T: io::Read>(buffer: &mut T) -> HpResult<String> {
+    let len: u16 = decode_varint(buffer)?.into();
+    if len == 0 {
+        return Ok(String::new());
+    }
+    let mut rv = vec![0; len as usize];
+    try_read!(buffer.read(&mut rv[..]), len as usize);
+    let val = String::from_utf8(rv);
+    if val.is_err() {
+        fail!((ErrorKind::StringFormatError, "string format error"));
+    }
+    Ok(val.ok().unwrap())
 }
 
 pub fn decode_str_raw(buffer: &mut Buffer, pattern: ValueType) -> HpResult<Value> {
@@ -196,15 +209,14 @@ pub fn decode_arr(buffer: &mut Buffer) -> HpResult<Value> {
 pub fn decode_by_pattern(buffer: &mut Buffer, pattern: &ValueType) -> HpResult<Value> {
     match *pattern {
         ValueType::Bool => decode_bool(buffer, *pattern),
-        ValueType::U8 | ValueType::I8 | ValueType::U16 | ValueType::I16 | ValueType::U32 | ValueType::I32 => {
-            decode_number(buffer, *pattern)
-        }
-        ValueType::F32 => {
-            Ok(Value::F32(buffer.buf.try_get_f32()?))
-        }
-        ValueType::F64 => {
-            Ok(Value::F64(buffer.buf.try_get_f64()?))
-        }
+        ValueType::U8
+        | ValueType::I8
+        | ValueType::U16
+        | ValueType::I16
+        | ValueType::U32
+        | ValueType::I32 => decode_number(buffer, *pattern),
+        ValueType::F32 => Ok(Value::F32(buffer.buf.try_get_f32()?)),
+        ValueType::F64 => Ok(Value::F64(buffer.buf.try_get_f64()?)),
         ValueType::Varint => decode_varint(buffer),
         ValueType::Str | ValueType::Raw => decode_str_raw(buffer, *pattern),
         ValueType::Map => decode_map(buffer),

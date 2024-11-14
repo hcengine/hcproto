@@ -144,12 +144,12 @@ pub fn encode_str_idx(buffer: &mut Buffer, pattern: &str) -> Result<()> {
     Ok(())
 }
 
-#[inline(always)]
-pub fn encode_str_idx_not_type(buffer: &mut Buffer, pattern: &str) -> Result<()> {
-    let idx = buffer.add_str(pattern.to_string());
-    encode_varint(buffer, &Value::U16(idx))?;
-    Ok(())
-}
+// #[inline(always)]
+// pub fn encode_str_idx_not_type(buffer: &mut Buffer, pattern: &str) -> Result<()> {
+//     let idx = buffer.add_str(pattern.to_string());
+//     encode_varint(buffer, &Value::U16(idx))?;
+//     Ok(())
+// }
 
 #[inline(always)]
 pub fn encode_str_raw(buffer: &mut Buffer, value: &Value) -> Result<()> {
@@ -166,6 +166,7 @@ pub fn encode_str_raw(buffer: &mut Buffer, value: &Value) -> Result<()> {
     }
     Ok(())
 }
+
 
 pub fn encode_map(buffer: &mut Buffer, value: &Value) -> Result<()> {
     match *value {

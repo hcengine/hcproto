@@ -16,3 +16,18 @@ pub use de::from_buffer;
 
 pub use encode::*;
 pub use decode::*;
+
+#[cfg(test)]
+mod tests {
+    use crate::{decode_varint, encode_varint, Buffer, Value};
+
+
+    #[test]
+    fn test_varint() {
+        let mut buffer = Buffer::new();
+        encode_varint(&mut buffer, &Value::U16(3)).unwrap();
+        let ret = decode_varint(&mut buffer).unwrap();
+        assert_eq!(ret, Value::U16(3));
+    }
+    
+}

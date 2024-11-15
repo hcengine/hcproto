@@ -13,8 +13,8 @@ keywords = ["hcnet"]
 
 [dependencies]
 serde =  { version = "1.0.214", features = ["derive"] }
-algorithm = "0.1.14"
-# algorithm = {path="../../algorithm"}
+# algorithm = "0.1.14"
+algorithm = {path="../../algorithm"}
 
 [dev-dependencies]
 serde = { version = "1", features = ["rc"] }

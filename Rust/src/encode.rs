@@ -1,43 +1,36 @@
-use std::io::{Result, Write};
-use std::mem;
+use std::io::Result;
 
-use algorithm::buf::BtMut;
+use algorithm::buf::{Bt, BtMut};
 
 use crate::{get_type_by_value, Buffer, Value, ValueType};
 
 #[inline(always)]
-pub fn append_and_align(buffer: &mut Buffer, val: &[u8]) -> Result<()> {
+pub fn append_and_align<B: Bt + BtMut>(buffer: &mut Buffer<B>, val: &[u8]) -> Result<()> {
     let _add = match val.len() % 2 {
         0 => 0,
         val => 2 - val,
     };
-    buffer.buf.write(val)?;
+    buffer.put_slice(val);
     Ok(())
 }
 
 #[inline(always)]
-pub fn encode_sure_type(buffer: &mut Buffer, value: ValueType) -> Result<()> {
-    buffer
-        .buf
-        .write(unsafe { &mem::transmute::<u8, [u8; 1]>(value as u8) })?;
+pub fn encode_sure_type<B: Bt + BtMut>(buffer: &mut Buffer<B>, value: ValueType) -> Result<()> {
+    buffer.put_u8(value as u8);
     Ok(())
 }
 
 #[inline(always)]
-pub fn encode_type(buffer: &mut Buffer, value: &Value) -> Result<()> {
-    buffer
-        .buf
-        .write(unsafe { &mem::transmute::<u8, [u8; 1]>(get_type_by_value(value) as u8) })?;
+pub fn encode_type<B: Bt + BtMut>(buffer: &mut Buffer<B>, value: &Value) -> Result<()> {
+    buffer.put_u8(get_type_by_value(value) as u8);
     Ok(())
 }
 
 #[inline(always)]
-pub fn encode_bool(buffer: &mut Buffer, value: &Value) -> Result<()> {
+pub fn encode_bool<B: Bt + BtMut>(buffer: &mut Buffer<B>, value: &Value) -> Result<()> {
     match *value {
         Value::Bool(val) => {
-            buffer
-                .buf
-                .write(unsafe { &mem::transmute::<u8, [u8; 1]>(if val { 1 } else { 0 }) })?;
+            buffer.put_u8(if val { 1 } else { 0 });
         }
         _ => unreachable!("encode_number only"),
     }
@@ -45,59 +38,37 @@ pub fn encode_bool(buffer: &mut Buffer, value: &Value) -> Result<()> {
 }
 
 #[inline(always)]
-pub fn encode_number(buffer: &mut Buffer, value: &Value) -> Result<()> {
+pub fn encode_number<B: Bt + BtMut>(buffer: &mut Buffer<B>, value: &Value) -> Result<()> {
     match *value {
         Value::U8(val) => {
-            buffer
-                .buf
-                .write(unsafe { &mem::transmute::<u8, [u8; 1]>(val) })?;
+            buffer.put_u8(val);
         }
         Value::I8(val) => {
-            buffer
-                .buf
-                .write(unsafe { &mem::transmute::<i8, [u8; 1]>(val) })?;
+            buffer.put_i8(val);
         }
         Value::U16(val) => {
-            buffer
-                .buf
-                .write(unsafe { &mem::transmute::<u16, [u8; 2]>(val.to_le()) })?;
+            buffer.put_u16(val);
         }
         Value::I16(val) => {
-            buffer
-                .buf
-                .write(unsafe { &mem::transmute::<i16, [u8; 2]>(val.to_le()) })?;
+            buffer.put_i16(val);
         }
         Value::U32(val) => {
-            buffer
-                .buf
-                .write(unsafe { &mem::transmute::<u32, [u8; 4]>(val.to_le()) })?;
+            buffer.put_u32(val);
         }
         Value::I32(val) => {
-            buffer
-                .buf
-                .write(unsafe { &mem::transmute::<i32, [u8; 4]>(val.to_le()) })?;
+            buffer.put_i32(val);
         }
         Value::U64(val) => {
-            buffer
-                .buf
-                .write(unsafe { &mem::transmute::<u64, [u8; 8]>(val.to_le()) })?;
+            buffer.put_u64(val);
         }
         Value::I64(val) => {
-            buffer
-                .buf
-                .write(unsafe { &mem::transmute::<i64, [u8; 8]>(val.to_le()) })?;
+            buffer.put_i64(val);
         }
         Value::F32(val) => {
-            let val = (val * 1000.0) as i32;
-            buffer
-                .buf
-                .write(unsafe { &mem::transmute::<i32, [u8; 4]>(val.to_le()) })?;
+            buffer.put_f32(val);
         }
         Value::F64(val) => {
-            let val = (val * 1000000.0) as i64;
-            buffer
-                .buf
-                .write(unsafe { &mem::transmute::<i64, [u8; 8]>(val.to_le()) })?;
+            buffer.put_f64(val);
         }
         _ => unreachable!("encode_number only"),
     }
@@ -105,7 +76,7 @@ pub fn encode_number(buffer: &mut Buffer, value: &Value) -> Result<()> {
 }
 
 #[inline(always)]
-pub fn encode_varint(buffer: &mut Buffer, value: &Value) -> Result<()> {
+pub fn encode_varint<B: Bt + BtMut>(buffer: &mut Buffer<B>, value: &Value) -> Result<()> {
     let val = match *value {
         Value::U8(val) => val as i64,
         Value::I8(val) => val as i64,
@@ -127,17 +98,17 @@ pub fn encode_varint(buffer: &mut Buffer, value: &Value) -> Result<()> {
         let data = (real & 0x7F) as u8;
         real = real >> 7;
         if real == 0 {
-            buffer.buf.write(&[data])?;
+            buffer.put_u8(data);
             break;
         } else {
-            buffer.buf.write(&[data | 0x80])?;
+            buffer.put_u8(data | 0x80);
         }
     }
     Ok(())
 }
 
 #[inline(always)]
-pub fn encode_str_idx(buffer: &mut Buffer, pattern: &str) -> Result<()> {
+pub fn encode_str_idx<B: Bt + BtMut>(buffer: &mut Buffer<B>, pattern: &str) -> Result<()> {
     let idx = buffer.add_str(pattern.to_string());
     encode_sure_type(buffer, ValueType::StrIdx)?;
     encode_varint(buffer, &Value::U16(idx))?;
@@ -152,7 +123,7 @@ pub fn encode_str_idx(buffer: &mut Buffer, pattern: &str) -> Result<()> {
 // }
 
 #[inline(always)]
-pub fn encode_str_raw(buffer: &mut Buffer, value: &Value) -> Result<()> {
+pub fn encode_str_raw<B: Bt + BtMut>(buffer: &mut Buffer<B>, value: &Value) -> Result<()> {
     match *value {
         Value::Str(ref val) => {
             encode_varint(buffer, &Value::U16(val.as_bytes().len() as u16))?;
@@ -167,8 +138,7 @@ pub fn encode_str_raw(buffer: &mut Buffer, value: &Value) -> Result<()> {
     Ok(())
 }
 
-
-pub fn encode_map(buffer: &mut Buffer, value: &Value) -> Result<()> {
+pub fn encode_map<B: Bt + BtMut>(buffer: &mut Buffer<B>, value: &Value) -> Result<()> {
     match *value {
         Value::Map(ref val) => {
             encode_varint(buffer, &Value::from(val.len() as u16))?;
@@ -182,7 +152,7 @@ pub fn encode_map(buffer: &mut Buffer, value: &Value) -> Result<()> {
     Ok(())
 }
 
-pub fn encode_field(buffer: &mut Buffer, value: &Value) -> Result<()> {
+pub fn encode_field<B: Bt + BtMut>(buffer: &mut Buffer<B>, value: &Value) -> Result<()> {
     match &*value {
         Value::Bool(_) => {
             encode_type(buffer, value)?;
@@ -243,7 +213,11 @@ pub fn encode_field(buffer: &mut Buffer, value: &Value) -> Result<()> {
     Ok(())
 }
 
-pub fn encode_proto(buffer: &mut Buffer, name: &String, infos: Vec<Value>) -> Result<()> {
+pub fn encode_proto<B: Bt + BtMut>(
+    buffer: &mut Buffer<B>,
+    name: &String,
+    infos: Vec<Value>,
+) -> Result<()> {
     let mut sub_buffer = Buffer::new();
     encode_field(&mut sub_buffer, &Value::from(infos))?;
 
@@ -254,5 +228,17 @@ pub fn encode_proto(buffer: &mut Buffer, name: &String, infos: Vec<Value>) -> Re
     }
 
     // buffer.buf.extend(&sub_buffer)?;
+    Ok(())
+}
+
+pub fn encode_msg<B: Bt + BtMut>(buffer: &mut Buffer<B>, infos: Vec<Value>) -> Result<()> {
+    let mut sub_buffer = Buffer::new();
+    encode_field(&mut sub_buffer, &Value::from(infos))?;
+
+    encode_varint(buffer, &Value::U16(sub_buffer.str_arr.len() as u16))?;
+    for v in &sub_buffer.str_arr {
+        encode_str_raw(buffer, &Value::Str(v.to_string()))?;
+    }
+    buffer.buf.put_slice(sub_buffer.buf.chunk());
     Ok(())
 }

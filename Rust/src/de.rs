@@ -4,19 +4,21 @@ use crate::decode::{decode_field, decode_str_raw, decode_type, decode_varint, pe
 use crate::error::HpError;
 use crate::{Buffer, HpResult, Value, ValueType};
 
+use algorithm::buf::{Bt, BtMut};
 use serde::de::{
     self, Deserialize, DeserializeSeed, EnumAccess, Error, MapAccess, SeqAccess, VariantAccess,
     Visitor,
 };
 use serde::forward_to_deserialize_any;
 
-pub fn from_buffer<'a, T>(buf: &'a mut Buffer) -> HpResult<T>
+pub fn from_buffer<'a, T, B>(buf: &'a mut Buffer<B>) -> HpResult<T>
 where
     T: Deserialize<'a>,
+    B: Bt + BtMut,
 {
     let mut deserializer = Deserializer::new(buf)?;
     let t = T::deserialize(&mut deserializer)?;
-    if deserializer.buf.buf.is_empty() {
+    if deserializer.buf.remaining() == 0 {
         Ok(t)
     } else {
         Err(HpError::custom("left buffer"))
@@ -24,13 +26,13 @@ where
 }
 
 #[derive(Debug)]
-pub struct Deserializer<'de> {
-    buf: &'de mut Buffer,
+pub struct Deserializer<'de, B: Bt+BtMut> {
+    buf: &'de mut Buffer<B>,
     value: Option<Value>,
 }
 
-impl<'de> Deserializer<'de> {
-    pub fn new(buf: &'de mut Buffer) -> HpResult<Self> {
+impl<'de, B: Bt+BtMut> Deserializer<'de, B> {
+    pub fn new(buf: &'de mut Buffer<B>) -> HpResult<Self> {
         let str_len: u16 = decode_varint(buf)?.into();
         for _ in 0..str_len {
             let value = decode_str_raw(buf, ValueType::Str)?.into();
@@ -97,7 +99,7 @@ impl<'de> Deserializer<'de> {
     }
 }
 
-impl<'de> de::Deserializer<'de> for &mut Deserializer<'de> {
+impl<'de, B: Bt+BtMut> de::Deserializer<'de> for &mut Deserializer<'de, B> {
     type Error = HpError;
 
     forward_to_deserialize_any! {
@@ -220,15 +222,15 @@ impl<'de> de::Deserializer<'de> for &mut Deserializer<'de> {
     }
 }
 
-struct CommaSeparated<'a, 'de: 'a> {
-    de: &'a mut Deserializer<'de>,
+struct CommaSeparated<'a, 'de: 'a, B: Bt+BtMut> {
+    de: &'a mut Deserializer<'de, B>,
     array: Vec<Value>,
     len: usize,
 }
 
 // `SeqAccess` is provided to the `Visitor` to give it the ability to iterate
 // through elements of the sequence.
-impl<'de> SeqAccess<'de> for CommaSeparated<'_, 'de> {
+impl<'de, B: Bt+BtMut> SeqAccess<'de> for CommaSeparated<'_, 'de, B> {
     type Error = HpError;
 
     fn next_element_seed<T>(&mut self, seed: T) -> HpResult<Option<T::Value>>
@@ -247,7 +249,7 @@ impl<'de> SeqAccess<'de> for CommaSeparated<'_, 'de> {
     }
 }
 
-impl<'de> MapAccess<'de> for CommaSeparated<'_, 'de> {
+impl<'de, B: Bt+BtMut> MapAccess<'de> for CommaSeparated<'_, 'de, B> {
     type Error = HpError;
 
     fn next_key_seed<K>(&mut self, seed: K) -> HpResult<Option<K::Value>>
@@ -279,18 +281,18 @@ impl<'de> MapAccess<'de> for CommaSeparated<'_, 'de> {
     }
 }
 
-struct Enum<'a, 'de: 'a> {
-    de: &'a mut Deserializer<'de>,
+struct Enum<'a, 'de: 'a, B: Bt+BtMut> {
+    de: &'a mut Deserializer<'de, B>,
 }
 
 #[allow(unused)]
-impl<'a, 'de> Enum<'a, 'de> {
-    fn new(de: &'a mut Deserializer<'de>) -> Self {
+impl<'a, 'de, B: Bt+BtMut> Enum<'a, 'de, B> {
+    fn new(de: &'a mut Deserializer<'de, B>) -> Self {
         Enum { de }
     }
 }
 
-impl<'de> EnumAccess<'de> for Enum<'_, 'de> {
+impl<'de, B: Bt+BtMut> EnumAccess<'de> for Enum<'_, 'de, B> {
     type Error = HpError;
     type Variant = Self;
 
@@ -305,7 +307,7 @@ impl<'de> EnumAccess<'de> for Enum<'_, 'de> {
 
 // `VariantAccess` is provided to the `Visitor` to give it the ability to see
 // the content of the single variant that it decided to deserialize.
-impl<'de> VariantAccess<'de> for Enum<'_, 'de> {
+impl<'de, B: Bt+BtMut> VariantAccess<'de> for Enum<'_, 'de, B> {
     type Error = HpError;
 
     // If the `Visitor` expected this variant to be a unit variant, the input

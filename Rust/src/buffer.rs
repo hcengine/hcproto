@@ -3,26 +3,36 @@ use std::{
     io::{Read, Write},
 };
 
-use algorithm::buf::{BinaryMut, Bt};
+use algorithm::buf::{BinaryMut, Bt, BtMut};
 
 use crate::{encode::{encode_str_raw, encode_varint}, error::HpResult, ErrorKind, HpError, Value};
 
 #[derive(Debug)]
-pub struct Buffer {
-    pub buf: BinaryMut,
+pub struct Buffer<T: Bt + BtMut = BinaryMut> {
+    pub buf: T,
     pub str_arr: Vec<String>,
     pub str_map: HashMap<String, u16>,
 }
 
-impl Buffer {
-    pub fn new() -> Buffer {
+impl Buffer<BinaryMut> {
+    pub fn new() -> Buffer<BinaryMut> {
         Buffer {
             buf: BinaryMut::new(),
             str_arr: Vec::new(),
             str_map: HashMap::new(),
         }
     }
+}
 
+impl<T: Bt + BtMut> Buffer<T> {
+    pub fn new_with(buf: T) -> Self {
+        Buffer {
+            buf,
+            str_arr: Vec::new(),
+            str_map: HashMap::new(),
+        }
+    }
+    
     pub fn add_str(&mut self, value: String) -> u16 {
         if self.str_map.contains_key(&value) {
             self.str_map[&value]
@@ -50,6 +60,10 @@ impl Buffer {
         sub_buffer.buf.put_slice(self.buf.chunk());
         Ok(sub_buffer)
     }
+
+    pub fn len(&self) -> usize {
+        self.buf.chunk().len()
+    }
 }
 
 impl Read for Buffer {
@@ -65,5 +79,42 @@ impl Write for Buffer {
 
     fn flush(&mut self) -> std::io::Result<()> {
         self.buf.flush()
+    }
+}
+
+impl<B: Bt+BtMut> Bt for Buffer<B> {
+    fn remaining(&self) -> usize {
+        self.buf.remaining()
+    }
+
+    fn chunk(&self) -> &[u8] {
+        self.buf.chunk()
+    }
+
+    fn advance(&mut self, n: usize) {
+        self.buf.advance(n)
+    }
+
+    fn advance_chunk(&mut self, n: usize) -> &[u8] {
+        self.buf.advance_chunk(n)
+    }
+
+    fn into_binary(self) -> algorithm::buf::Binary {
+        self.buf.into_binary()
+    }
+}
+
+
+unsafe impl<B: Bt+BtMut> BtMut for Buffer<B> {
+    fn remaining_mut(&self) -> usize {
+        self.buf.remaining_mut()
+    }
+
+    unsafe fn advance_mut(&mut self, cnt: usize) {
+        self.buf.advance_mut(cnt)
+    }
+
+    fn chunk_mut(&mut self) -> &mut [std::mem::MaybeUninit<u8>] {
+        self.buf.chunk_mut()
     }
 }

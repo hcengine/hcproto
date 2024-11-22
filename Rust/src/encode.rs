@@ -5,7 +5,7 @@ use algorithm::buf::{Bt, BtMut};
 use crate::{get_type_by_value, Buffer, Value, ValueType};
 
 #[inline(always)]
-pub fn append_and_align<B: Bt + BtMut>(buffer: &mut Buffer<B>, val: &[u8]) -> Result<()> {
+pub fn append_and_align<B: BtMut>(buffer: &mut B, val: &[u8]) -> Result<()> {
     let _add = match val.len() % 2 {
         0 => 0,
         val => 2 - val,
@@ -76,7 +76,7 @@ pub fn encode_number<B: Bt + BtMut>(buffer: &mut Buffer<B>, value: &Value) -> Re
 }
 
 #[inline(always)]
-pub fn encode_varint<B: Bt + BtMut>(buffer: &mut Buffer<B>, value: &Value) -> Result<()> {
+pub fn encode_varint<B: BtMut>(buffer: &mut B, value: &Value) -> Result<()> {
     let val = match *value {
         Value::U8(val) => val as i64,
         Value::I8(val) => val as i64,
@@ -121,6 +121,13 @@ pub fn encode_str_idx<B: Bt + BtMut>(buffer: &mut Buffer<B>, pattern: &str) -> R
 //     encode_varint(buffer, &Value::U16(idx))?;
 //     Ok(())
 // }
+
+
+pub fn encode_string<B: BtMut>(buffer: &mut B, val: &str) -> Result<()> {
+    encode_varint(buffer, &Value::U16(val.as_bytes().len() as u16))?;
+    append_and_align(buffer, &val.as_bytes()[..])?;
+    Ok(())
+}
 
 #[inline(always)]
 pub fn encode_str_raw<B: Bt + BtMut>(buffer: &mut Buffer<B>, value: &Value) -> Result<()> {

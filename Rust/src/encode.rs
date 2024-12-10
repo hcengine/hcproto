@@ -243,14 +243,21 @@ pub fn encode_msg<B: Bt + BtMut>(buffer: &mut Buffer<B>, infos: Vec<Value>) -> R
     encode_field(&mut sub_buffer, &Value::from(infos))?;
 
     encode_varint(buffer, &Value::U16(sub_buffer.str_arr.len() as u16))?;
-    println!("buffer 1 = {:?}", buffer.chunk());
     for v in &sub_buffer.str_arr {
         encode_str_raw(buffer, &Value::Str(v.to_string()))?;
     }
-    println!("buffer 2 = {:?}", buffer.chunk());
-    println!("buffer zz = {:?}", buffer.buf.chunk());
-    println!("buffer 4 = {:?}", sub_buffer.chunk());
     buffer.put_slice(sub_buffer.chunk());
-    println!("buffer 3 = {:?}", buffer.chunk());
+    Ok(())
+}
+
+
+pub fn encode_msg_map<B: Bt + BtMut>(buffer: &mut Buffer<B>, map: Value) -> Result<()> {
+    let mut sub_buffer = Buffer::new();
+    encode_field(&mut sub_buffer, &map)?;
+    encode_varint(buffer, &Value::U16(sub_buffer.str_arr.len() as u16))?;
+    for v in &sub_buffer.str_arr {
+        encode_str_raw(buffer, &Value::Str(v.to_string()))?;
+    }
+    buffer.put_slice(sub_buffer.chunk());
     Ok(())
 }

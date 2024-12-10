@@ -13,7 +13,6 @@ where
         buf: Buffer::new(),
     };
     value.serialize(&mut serializer)?;
-    
     serializer.buf.export()
 }
 
@@ -211,7 +210,7 @@ impl<'s> ser::Serializer for &'s mut Serializer {
 
     fn serialize_map(self, len: Option<usize>) -> Result<Self, Self::Error> {
         encode_sure_type(&mut self.buf, ValueType::Map)?;
-        encode_varint(&mut self.buf, &Value::from(len.unwrap_or(0) as u16))?;
+        encode_varint(&mut self.buf, &Value::from((len.unwrap_or(0) * 2) as u32))?;
         Ok(self)
     }
 
@@ -221,8 +220,7 @@ impl<'s> ser::Serializer for &'s mut Serializer {
         len: usize,
     ) -> Result<Self::SerializeStruct, Self::Error> {
         encode_sure_type(&mut self.buf, ValueType::Arr)?;
-        // encode_str_idx_not_type(&mut self.buf, &name)?;
-        encode_varint(&mut self.buf, &Value::from(len as u32))?;
+        encode_varint(&mut self.buf, &Value::from((len * 2) as u32))?;
         Ok(self)
     }
 

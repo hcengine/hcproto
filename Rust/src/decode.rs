@@ -237,3 +237,18 @@ pub fn decode_msg<B: Bt+BtMut>(buffer: &mut Buffer<B>) -> HpResult<Vec<Value>> {
         _ => Err(make_extension_error("proto is not array", None)),
     }
 }
+
+
+pub fn decode_msg_map<B: Bt+BtMut>(buffer: &mut Buffer<B>) -> HpResult<Value> {
+    let str_len: u16 = decode_varint(buffer)?.into();
+    for _ in 0..str_len {
+        let value = decode_str_raw(buffer, ValueType::Str)?.into();
+        buffer.add_str(value);
+    }
+
+    let sub_value = decode_map(buffer)?;
+    match sub_value {
+        Value::Map(_) => Ok(sub_value),
+        _ => Err(make_extension_error("proto is not array", None)),
+    }
+}

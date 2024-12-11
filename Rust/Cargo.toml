@@ -1,6 +1,6 @@
 [package]
 name = "hcproto"
-version = "0.1.1"
+version = "0.1.2"
 authors = [ "hpnlic <hpnlic@hotmail.com>" ]
 edition = "2021"
 description = "net for Rust"
@@ -13,9 +13,9 @@ keywords = ["hcnet"]
 
 [dependencies]
 serde =  { version = "1.0.214", features = ["derive"] }
-# algorithm = "0.1.14"
-algorithm = {path="../../algorithm"}
+algorithm = "0.1.16"
+# algorithm = {path="../../algorithm"}
 
 [dev-dependencies]
 serde = { version = "1", features = ["rc"] }
-serde_derive = "1.0.214"
+serde_derive = "1.0.216"

@@ -205,6 +205,7 @@ impl<'de, B: Bt + BtMut> de::Deserializer<'de> for &mut Deserializer<'de, B> {
         let t = decode_type(&mut self.buf)?;
         if t == ValueType::Arr || t == ValueType::Map {
             let len: u32 = decode_varint(&mut self.buf)?.into();
+            println!("len = {:?}", len);
             visitor.visit_map(CommaSeparated {
                 de: self,
                 array: vec![],
@@ -266,10 +267,10 @@ impl<'de, B: Bt + BtMut> MapAccess<'de> for CommaSeparated<'_, 'de, B> {
             self.de.value = self.array.pop();
             seed.deserialize(&mut *self.de).map(Some)
         } else {
-            if self.len == 0 {
+            if self.len <= 1 {
                 return Ok(None);
             }
-            self.len -= 1;
+            self.len -= 2;
             seed.deserialize(&mut *self.de).map(Some)
         }
     }

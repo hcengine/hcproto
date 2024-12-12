@@ -80,4 +80,4 @@ fn test_level4_json() {
 解析速度约为JSON的68倍, 符合预期, 大小为明文的0.16倍, 符合压缩比
 
 #### 相关连接
-[协议地址https://github.com/hcengine/hcproto](https://github.com/hcengine/hcproto)
+[协议地址https://github.com/hcengine/hcproto/tree/main/Rust](https://github.com/hcengine/hcproto/tree/main/Rust)

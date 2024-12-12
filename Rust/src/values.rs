@@ -47,7 +47,6 @@ impl From<u8> for ValueType {
             15 => ValueType::Raw,
             16 => ValueType::Arr,
             17 => ValueType::Map,
-            // 18 => ValueType::Kv,
 
             _ => ValueType::Nil,
         }
@@ -109,10 +108,10 @@ impl From<ValueType> for ValueDescType {
             ValueType::F32 => ValueDescType::F32,
             ValueType::F64 => ValueDescType::F64,
             ValueType::Str => ValueDescType::Str,
-            ValueType::Raw => ValueDescType::StrIdx,
+            ValueType::StrIdx => ValueDescType::StrIdx,
+            ValueType::Raw => ValueDescType::Raw,
             ValueType::Arr => ValueDescType::Arr,
             ValueType::Map => ValueDescType::Map,
-            // ValueType::Kv => ValueDescType::Kv,
             _ => ValueDescType::Nil,
         }
     }
@@ -135,10 +134,10 @@ impl From<ValueDescType> for ValueType {
             ValueDescType::F32 => ValueType::F32,
             ValueDescType::F64 => ValueType::F64,
             ValueDescType::Str => ValueType::Str,
+            ValueDescType::StrIdx => ValueType::StrIdx,
             ValueDescType::Raw => ValueType::Raw,
             ValueDescType::Arr => ValueType::Arr,
             ValueDescType::Map => ValueType::Map,
-            // ValueDescType::Kv => ValueType::Kv,
             _ => ValueType::Nil,
         }
     }

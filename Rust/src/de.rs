@@ -134,7 +134,8 @@ impl<'de, B: Bt + BtMut> de::Deserializer<'de> for &mut Deserializer<'de, B> {
         if value.is_nil() {
             visitor.visit_none()
         } else {
-            self.visit_val(value, visitor)
+            self.value = Some(value);
+            visitor.visit_some(self)
         }
     }
 
@@ -205,7 +206,7 @@ impl<'de, B: Bt + BtMut> de::Deserializer<'de> for &mut Deserializer<'de, B> {
         let t = decode_type(&mut self.buf)?;
         if t == ValueType::Arr || t == ValueType::Map {
             let len: u32 = decode_varint(&mut self.buf)?.into();
-            println!("len = {:?}", len);
+            println!("deserialize_struct len = {:?} t = {:?}", len, t);
             visitor.visit_map(CommaSeparated {
                 de: self,
                 array: vec![],

@@ -122,7 +122,6 @@ pub fn encode_str_idx<B: Bt + BtMut>(buffer: &mut Buffer<B>, pattern: &str) -> R
 //     Ok(())
 // }
 
-
 pub fn encode_string<B: BtMut>(buffer: &mut B, val: &str) -> Result<()> {
     encode_varint(buffer, &Value::U16(val.as_bytes().len() as u16))?;
     append_and_align(buffer, &val.as_bytes()[..])?;
@@ -148,7 +147,7 @@ pub fn encode_str_raw<B: Bt + BtMut>(buffer: &mut Buffer<B>, value: &Value) -> R
 pub fn encode_map<B: Bt + BtMut>(buffer: &mut Buffer<B>, value: &Value) -> Result<()> {
     match *value {
         Value::Map(ref val) => {
-            encode_varint(buffer, &Value::from(val.len() as u16))?;
+            encode_varint(buffer, &Value::from((val.len() * 2) as u32))?;
             for (name, sub_value) in val {
                 encode_field(buffer, name)?;
                 encode_field(buffer, sub_value)?;
@@ -234,7 +233,7 @@ pub fn encode_proto<B: Bt + BtMut>(
         encode_str_raw(buffer, &Value::Str(v.to_string()))?;
     }
 
-    // buffer.buf.extend(&sub_buffer)?;
+    buffer.buf.put_slice(sub_buffer.chunk());
     Ok(())
 }
 
@@ -249,7 +248,6 @@ pub fn encode_msg<B: Bt + BtMut>(buffer: &mut Buffer<B>, infos: Vec<Value>) -> R
     buffer.put_slice(sub_buffer.chunk());
     Ok(())
 }
-
 
 pub fn encode_msg_map<B: Bt + BtMut>(buffer: &mut Buffer<B>, map: Value) -> Result<()> {
     let mut sub_buffer = Buffer::new();

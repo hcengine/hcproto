@@ -150,8 +150,8 @@ pub fn decode_str_raw<B: Bt+BtMut>(buffer: &mut Buffer<B>, pattern: ValueType) -
 
 pub fn decode_map<B: Bt+BtMut>(buffer: &mut Buffer<B>) -> HpResult<Value> {
     let mut map = HashMap::<Value, Value>::new();
-    let arr_len: u16 = decode_varint(buffer)?.into();
-    for _ in 0..arr_len {
+    let arr_len: u32 = decode_varint(buffer)?.into();
+    for _ in 0..arr_len / 2 {
         let key = decode_field(buffer)?;
         let sub_value = decode_field(buffer)?;
         map.insert(key, sub_value);

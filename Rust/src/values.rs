@@ -112,7 +112,7 @@ impl From<ValueType> for ValueDescType {
             ValueType::Raw => ValueDescType::Raw,
             ValueType::Arr => ValueDescType::Arr,
             ValueType::Map => ValueDescType::Map,
-            _ => ValueDescType::Nil,
+            // _ => ValueDescType::Nil,
         }
     }
 }

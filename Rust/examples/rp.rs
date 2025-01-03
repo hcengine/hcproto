@@ -14,8 +14,9 @@ fn test_level4_json() {
     let mut buffer = Buffer::new();
     hcproto::encode_proto(&mut buffer, &"cmd_level4_full".to_string(), vec![parsed]).unwrap();
     println!(
-        "用tunm_proto压缩test_level4_json的长度 = {}k",
-        buffer.remaining() / 1024
+        "用tunm_proto压缩test_level4_json的长度 = {}k，耗时：{:?}",
+        buffer.remaining() / 1024,
+        now.elapsed()
     );
 
     println!("压缩JSON耗时 = {:?}", now.elapsed());
